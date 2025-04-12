@@ -1,0 +1,32 @@
+.table-container {
+    margin-top: 2rem;
+  }
+  
+  .satellites-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-family: sans-serif;
+  }
+  
+  .satellites-table th {
+    background-color: #004080; /* Azul empresarial */
+    color: white;
+    padding: 8px;
+    text-align: center;
+  }
+  
+  .satellites-table td {
+    background-color: #f2f2f2; /* Gris empresarial */
+    padding: 8px;
+    text-align: center;
+  }
+  
+  .satellites-table tr:nth-child(even) td {
+    background-color: #e6e6e6; /* Gris más oscuro para filas pares */
+  }
+  
+  .satellites-table th,
+  .satellites-table td {
+    border: 1px solid #cccccc;
+  }
+  
