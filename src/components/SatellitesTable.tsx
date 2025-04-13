@@ -31,7 +31,7 @@ function SatellitesTable({ satellites }: Props) {
 
   return (
     <div className="table-container">
-      <h2>🛰️ Tabla de Satélites ({satsSorted.length})</h2>
+      <h2>🛰️ Satélites en órbita ({satsSorted.length})</h2>
 
       <div style={{ marginBottom: "1rem" }}>
         <label>Filtrar por País: </label>

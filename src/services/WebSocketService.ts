@@ -32,7 +32,7 @@ export const connectWebSocket = (
 
     socket.onmessage = (event) => {
       const data = JSON.parse(event.data);
-      console.log("Evento recibido:", data);
+      //console.log("Evento recibido:", data);
       onEvent(data);
     };
 

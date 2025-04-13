@@ -2,11 +2,45 @@ import { useEffect, useRef, useState } from "react";
 import Globe from "globe.gl"; // Asegúrate que la importación y uso sea correcto para tu versión
 import { Satellite } from "../models/Satellite";
 import { Launchsite } from "../models/Launchsite";
+import { Coordinates } from "../models/types";
 
-interface Props {
+
+
+const DSNAntennas = [
+    {
+      id: "Goldstone",
+      name: "Goldstone Deep Space Communications Complex",
+      lat: 35.426666,
+      lng: -116.890000,
+      countryName: "USA"
+    },
+    {
+      id: "Madrid",
+      name: "Madrid Deep Space Communications Complex",
+      lat: 40.431388,
+      lng: -4.248055,
+      countryName: "Spain"
+    },
+    {
+      id: "Canberra",
+      name: "Canberra Deep Space Communication Complex",
+      lat: -35.401388,
+      lng: 148.981666,
+      countryName: "Australia"
+
+      
+    }
+  ];
+
+  
+  
+  interface Props {
     satellites: Satellite[];
     launchsites: Launchsite[];
-}
+    launchArcs: { satellite_id: string; start: Coordinates; end: Coordinates }[];
+    crashSites: { satellite_id: string; lat: number; lng: number; message: string }[];
+  }
+  
 
 const mapPowerToRadius = (power: number) => {
     const maxPower = 40;
@@ -14,7 +48,7 @@ const mapPowerToRadius = (power: number) => {
     return (power / maxPower) * maxRadius;
 };
 
-function SatellitesGlobe({ satellites, launchsites }: Props) {
+function SatellitesGlobe({ satellites, launchsites, launchArcs, crashSites}: Props) {
 
     const [selectedItem, setSelectedItem] = useState<any>(null);  // Puede ser satélite o launchsite
 
@@ -53,7 +87,11 @@ function SatellitesGlobe({ satellites, launchsites }: Props) {
             .particleLat((d: any) => d.lat)
             .particleLng((d: any) => d.lng) // CORREGIDO: usar d.lng
             .particleAltitude(0.01) // Un poco sobre el suelo
-            .particlesColor(() => "white") // Color fijo para launchsites
+            .particlesColor((d: any) =>
+                d.id === "Goldstone" || d.id === "Madrid" || d.id === "Canberra"
+                    ? "white"
+                    : "yellow"
+            )
             .particlesSize(6)        // Tamaño fijo (ajusta si lo deseas)
             .particleLabel((d: any) => d.name ? `<b>Launchsite:</b> ${d.name}`: 'Launchsite') // Etiqueta simple
             .onParticleClick((site: any) => {
@@ -156,36 +194,95 @@ function SatellitesGlobe({ satellites, launchsites }: Props) {
         if (!globeInstance.current) return;
 
         if (showCoverage) {
-            globeInstance.current.ringsData(
-                satData.current.map((sat) => ({
-                    lat: sat.lat,
-                    lng: sat.lng,
-                    maxR: mapPowerToRadius(sat.power),
-                    // propagationSpeed y repeatPeriod se configuran abajo
-                }))
-            )
-            .ringColor(() => (t: number) => `rgba(100, 255, 100, ${Math.sqrt(1 - t)})`) // Color con desvanecimiento
+            globeInstance.current
+            .ringsData([
+            ...satData.current.map((sat) => ({
+                lat: sat.lat,
+                lng: sat.lng,
+                maxR: mapPowerToRadius(sat.power),
+                color: 'rgba(100, 255, 100, 1)', // verde claro normal
+            })),
+            ...crashSites.map((crash) => ({
+                lat: crash.lat,
+                lng: crash.lng,
+                maxR: 3, // Radio fijo (o puedes hacer un mapPowerToRadius custom)
+                color: 'rgba(255, 0, 0, 1)' // Rojo fuerte
+            })),
+            ])
+            .ringColor((d: any) => () => d.color)
             .ringMaxRadius('maxR')
-            .ringPropagationSpeed(5) // Velocidad de propagación del anillo
-            .ringRepeatPeriod(800);  // Frecuencia con la que se repite el anillo
+            .ringPropagationSpeed(5)
+            .ringRepeatPeriod(800);
         } else {
-            globeInstance.current.ringsData([]); // Oculta los anillos
+            globeInstance.current
+            .ringsData([
+            ...crashSites.map((crash) => ({
+                lat: crash.lat,
+                lng: crash.lng,
+                maxR: 3, // Radio fijo (o puedes hacer un mapPowerToRadius custom)
+                color: 'rgba(255, 0, 0, 1)' // Rojo fuerte
+            })),
+            ])
+            .ringColor((d: any) => () => d.color)
+            .ringMaxRadius('maxR')
+            .ringPropagationSpeed(5)
+            .ringRepeatPeriod(800);
         }
         // Depende de showCoverage y satellites (porque los anillos usan satData)
     }, [showCoverage, satellites]);
+
+    useEffect(() => {
+        // Acá combinamos los launchsites que llegan por WebSocket
+        // con las antenas fijas que tú definiste (DSNAntennas)
+        
+        launchData.current = [
+          ...launchsites.map((site) => ({
+            id: site.station_id,
+            lat: site.location.lat,
+            lng: site.location.long,
+            name: site.name || "(sin nombre)",
+            countryName: site.country.name,
+          })),
+          ...DSNAntennas
+        ];
+      }, [launchsites]);
+      
 
     useEffect(() => {
         if (!globeInstance.current) return;
       
         globeInstance.current.particlesData([launchData.current]);
       }, [launchsites]);
+
+      useEffect(() => {
+        if (!globeInstance.current) return;
+      
+        globeInstance.current
+          .arcsData(launchArcs.map(a => ({
+            start: a.start,
+            end: a.end,
+            satellite_id: a.satellite_id
+          })))
+          .arcStartLat((d: any) => d.start.lat)
+          .arcStartLng((d: any) => d.start.long)
+          .arcEndLat((d: any) => d.end.lat)
+          .arcEndLng((d: any) => d.end.long)
+          .arcColor(() => ["white", "blue"])
+          .arcDashLength(0.3)
+          .arcDashGap(0.2)
+          .arcDashInitialGap(() => Math.random())
+          .arcDashAnimateTime(2000)
+          .arcAltitudeAutoScale(0.75);
+
+        //console.log("Estos son los ARCOS que se deberían mostrar en el tiempo")
+        //console.log(launchArcs)
+      }, [launchArcs]);
+      
+    
       
 
 
-    // --- Se eliminó el useEffect con setInterval ---
-    // Las actualizaciones ahora se basan en cambios de props (satellites, launchsites)
-    // y estado (showCoverage). Si necesitas simular movimiento, necesitarías
-    // un mecanismo diferente para obtener y actualizar posiciones periódicamente.
+
 
     return (
         // Asegúrate que este div o su padre tengan dimensiones definidas
