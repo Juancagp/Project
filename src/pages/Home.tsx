@@ -30,17 +30,8 @@ function Home() {
     return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   }
 
-  function calcularSenal(latAntenna: number, lngAntenna: number): number {
-    return satellitesRef.current.reduce((total, sat) => {
-      const distancia = haversine(latAntenna, lngAntenna, sat.position.lat, sat.position.long);
-      if (distancia <= sat.power) {
-        const senalSat = 1 - distancia / sat.power;
-        return total + Math.max(0, senalSat);
-      }
-      return total;
-    }, 0);
-  }
-    
+
+
 
   useEffect(() => {
     connectWebSocket((data: any) => {
