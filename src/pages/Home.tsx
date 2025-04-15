@@ -84,7 +84,7 @@ function Home() {
                 setCrashSites((prev) =>
                   prev.filter((c) => c.satellite_id !== data.satellite_id)
                 );
-              }, 120000); 
+              }, 180000); 
 
               // Eliminar satélite de la data
               satellitesRef.current = satellitesRef.current.filter(
