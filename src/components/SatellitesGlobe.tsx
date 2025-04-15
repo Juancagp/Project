@@ -4,7 +4,43 @@ import { Satellite } from "../models/Satellite";
 import { Launchsite } from "../models/Launchsite";
 import { Coordinates } from "../models/types";
 
+// Distancia geodésica entre dos puntos en km
+const haversine = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    const R = 6371;
+    const dLat = (lat2 - lat1) * Math.PI / 180;
+    const dLon = (lon2 - lon1) * Math.PI / 180;
+    const a = Math.sin(dLat / 2) ** 2 +
+      Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) *
+      Math.sin(dLon / 2) ** 2;
+    return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  };
 
+  const distanciaPlano = (lat1: number, lon1: number, lat2: number, lon2: number) => {
+    return Math.sqrt((lat2 - lat1) ** 2 + (lon2 - lon1) ** 2);
+  };
+  
+  
+  // Suma de señal recibida por una antena
+  const calcularSenalTotal = (latAntenna: number, lngAntenna: number, satellites: Satellite[]) => {
+    return satellites.reduce((total, sat) => {
+      const distancia = distanciaPlano(latAntenna, lngAntenna, sat.position.lat, sat.position.long);
+      if (distancia <= sat.power) {
+        const senal = Math.max(0, 1 - distancia / sat.power);
+        return total + senal;
+      }
+      return total;
+    }, 0);
+  };
+  
+  
+  // Satélites cuya cobertura alcanza la antena
+  const obtenerSatelitesCercanos = (lat: number, lng: number, satellites: Satellite[]) => {
+    return satellites.filter(sat => {
+      const distancia = distanciaPlano(lat, lng, sat.position.lat, sat.position.long);
+      return distancia <= sat.power;
+    });
+  };
+  
 
 const DSNAntennas = [
     {
@@ -95,11 +131,19 @@ function SatellitesGlobe({ satellites, launchsites, launchArcs, crashSites}: Pro
             .particlesSize(6)        // Tamaño fijo (ajusta si lo deseas)
             .particleLabel((d: any) => d.name ? `<b>Launchsite:</b> ${d.name}`: 'Launchsite') // Etiqueta simple
             .onParticleClick((site: any) => {
+                const senal = calcularSenalTotal(site.lat, site.lng, satellites);
+                const cercanos = obtenerSatelitesCercanos(site.lat, site.lng, satellites);
+              
                 setSelectedItem({
                   type: 'launchsite',
-                  data: site
+                  data: {
+                    ...site,
+                    senal: (senal * 100).toFixed(1), // Porcentaje bonito
+                    cercanos: cercanos.map(s => s.name || s.satellite_id) // Lista de nombres
+                  }
                 });
               })
+              
 
             // --- Configuración de Puntos (Satélites) ---
             .pointsData([]) // Inicia vacío, se llenará después
@@ -372,6 +416,17 @@ function SatellitesGlobe({ satellites, launchsites, launchArcs, crashSites}: Pro
                     <p>Lat: {selectedItem.data.lat}</p>
                     <p>Long: {selectedItem.data.lng}</p>
                     <p>País: {selectedItem.data.countryName}</p>
+                    <p>Señal recibida: {selectedItem.data.senal}%</p>
+                    <p>Satélites cercanos:</p>
+                    <ul>
+                        {selectedItem.data.cercanos.length > 0 ? (
+                        selectedItem.data.cercanos.map((sat: string) => (
+                            <li key={sat}>{sat}</li>
+                        ))
+                        ) : (
+                        <li>Ninguno</li>
+                        )}
+                    </ul>
                 </>
                 )}
             </div>
