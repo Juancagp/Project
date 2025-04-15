@@ -43,7 +43,7 @@ const DSNAntennas = [
   
 
 const mapPowerToRadius = (power: number) => {
-    const maxPower = 40;
+    const maxPower = 4000;
     const maxRadius = 5;
     return (power / maxPower) * maxRadius;
 };

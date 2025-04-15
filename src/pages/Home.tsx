@@ -22,6 +22,31 @@ function Home() {
     connectWebSocket((data: any) => {
       switch (data.type) {
 
+        case "POWER-UP":
+      satellitesRef.current = satellitesRef.current.map(sat => {
+        if (sat.satellite_id === data.satellite_id) {
+          return {
+            ...sat,
+            power: sat.power + data.amount,
+          };
+        }
+        return sat;
+      });
+      break;
+
+    case "POWER-DOWN":
+      satellitesRef.current = satellitesRef.current.map(sat => {
+        if (sat.satellite_id === data.satellite_id) {
+          return {
+            ...sat,
+            power: Math.max(0, sat.power - data.amount), // Para que no quede negativo
+          };
+        }
+        return sat;
+      });
+      break;
+
+
 
         case "POSITION_UPDATE":
           data.satellites.forEach((updatedSat: any) => {

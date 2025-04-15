@@ -29,14 +29,16 @@ function ChatSatelital({ messages, setMessages }: Props) {
     // Comando power
     else if (input.startsWith("/power ")) {
       const parts = input.split(" ");
-      if (parts.length >= 3) {
+      if (parts.length >= 4) {
         const satellite_id = parts[1];
         const power = parseInt(parts[2]);
+        const direction = parts[3]
         if (!isNaN(power)) {
           sendMessage({
             type: "CHANGE-POWER",
+            amount: power,
             satellite_id,
-            power,
+            direction
           });
 
           console.log("Enviado el cambio de power!!!")
